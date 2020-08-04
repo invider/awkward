@@ -1,0 +1,4 @@
+#!/bin/bash
+
+socat -v tcp-l:11911,fork exec:'./handle'
+

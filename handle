@@ -1,0 +1,13 @@
+#!/bin/bash
+
+#STDIN=`cat -`
+
+#while read -r line; do
+#    echo '...'$line 1>&2
+#done
+
+#read -r -d '' x
+#echo '...'$x 1>&2
+
+echo -en "HTTP/1.1 200 OK\n\nOK\n"
+

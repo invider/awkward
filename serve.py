@@ -1,10 +1,14 @@
 #!/usr/bin/env python
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import ssl
 import time
 import subprocess
 
-hostName = 'localhost'
+bindHost = 'localhost'
 serverPort = 11911
+cert = './cert/awkward.crt'
+key = './cert/awkward.key'
 
 class AwkwardServer(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -24,14 +28,21 @@ class AwkwardServer(BaseHTTPRequestHandler):
 
 
 #if __name__ == "__main__":
-webServer = HTTPServer((hostName, serverPort), AwkwardServer)
-print("Server listening at http://%s:%s" % (hostName, serverPort))
+
+# setup https server
+httpd = HTTPServer((bindHost, serverPort), AwkwardServer)
+httpd.socket = ssl.wrap_socket(httpd.socket,
+                server_side = True,
+                certfile = cert,
+                keyfile = key,
+                ssl_version = ssl.PROTOCOL_TLS)
+print("Server listening at http://%s:%s" % (bindHost, serverPort))
 
 try:
-    webServer.serve_forever()
+    httpd.serve_forever()
 except KeyboardInterrupt:
     pass
 
-webServer.server_close()
+httpd.server_close()
 print("Server stopped.")
 

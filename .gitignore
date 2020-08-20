@@ -1,0 +1,7 @@
+
+# SSL
+*.key
+*.pem
+*.srl
+*.csr
+*.crt

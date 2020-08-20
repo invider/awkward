@@ -1,0 +1,14 @@
+[req]
+default_bits = 2048
+prompt  = no
+default_md = sha256
+distinguished_name = dn
+
+[dn]
+C=UA
+ST=UA
+L=Kiev
+O=End Point
+OU=Test Domain
+emailAddress=test@example.com
+CN=localhost

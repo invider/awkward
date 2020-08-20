@@ -1,0 +1,8 @@
+#!/bin/sh
+
+rm awkward.key
+rm awkward.csr
+rm awkward.crt
+rm awkwardCA.key
+rm awkwardCA.pem
+rm awkwardCA.srl

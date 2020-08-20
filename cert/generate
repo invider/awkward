@@ -1,0 +1,17 @@
+#!/bin/bash
+
+AUTH=awkwardCA
+CERT=awkward
+EXT=awkward.ext
+
+# create a private key
+openssl req -new -sha256 -nodes -out $CERT.csr -newkey rsa:2048 \
+    -keyout $CERT.key -config <( cat server.csr.cnf )
+
+# create a certificate
+openssl x509 -req -sha256 -days 1024 -in $CERT.csr \
+    -CA $AUTH.pem -CAkey $AUTH.key \
+    -CAcreateserial -extfile $EXT -out $CERT.crt
+
+openssl x509 -text -in $CERT.crt -noout
+

@@ -1,0 +1,3 @@
+#!/bin/sh
+
+curl -v -k https://localhost:11911/

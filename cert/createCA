@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# create a Certification Authority cert
+openssl genrsa -out ./awkwardCA.key 2048
+
+openssl req -x509 -new -nodes -key ./awkwardCA.key -sha256 -days 1024 \
+    -subj "/C=UA/ST=UA/L=Kiev/O=Test-Cert/CN=localhost" \
+    -out ./awkwardCA.pem
+
+echo '===== CREATED CA CERTIFICATE ====='
+cat awkwardCA.pem
+

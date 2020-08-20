@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import os
 import sys
 import ssl
 import secrets
@@ -23,6 +24,7 @@ env = {
     'tls': False,
     'cert': './cert/awkward.crt',
     'key': './cert/awkward.key',
+    'xtokenFile': './awkward.xtoken',
 }
 
 def option(key):
@@ -82,19 +84,50 @@ def configure():
         raise ValueError('Value for [' + opt + '] is expected')
 
     if isEnabled('verbose'):
-        print('=== configuration ===')
+        print('===== configuration =====')
         for k in env:
             print(k + ':\t' + str(env[k]))
+        print('=========================')
 
     return
+
+def readToken():
+    path = option('xtokenFile')
+    if os.path.isfile(path):
+        if isEnabled('verbose'):
+            print('reading access token cached in [' + path + ']')
+        with open(path) as f:
+            data = f.read()
+        return data.strip()
+    else:
+        return ''
 
 def setupToken():
     if isDisabled('auth'):
         return
-    xtoken = secrets.token_urlsafe(16)
+
+    fresh = False
+
+    xtoken = readToken()
+    if xtoken == '':
+        # generate a new access token
+        if isEnabled('verbose'):
+            print('generating new access token')
+        xtoken = secrets.token_urlsafe(16)
+        fresh = True
+
     env['xtoken'] = xtoken
     print('Access Token: [' + xtoken + ']')
-    return
+
+    if fresh:
+        # cache the generated access token
+        path = option('xtokenFile')
+        with open(path, 'w') as f:
+            if isEnabled('verbose'):
+                print('caching access token to [' + path + ']')
+            f.write(xtoken)
+            f.close()
+
 
 def authenticate(headers):
     if isDisabled('auth'):

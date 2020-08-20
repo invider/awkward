@@ -4,6 +4,7 @@ import sys
 import urllib
 
 host = 'https://localhost:9801'
+xtoken = '7sijC9zL-C3L7b7Xb0nvzQ'
 query = ''
 
 def configure():
@@ -23,6 +24,10 @@ def compileUrl():
 configure()
 
 session = Session()
-res = session.get(compileUrl(), verify = './cert/awkwardCA.pem')
+
+headers = {
+    'X-Token': xtoken,
+}
+res = session.get(compileUrl(), headers=headers, verify = './cert/awkwardCA.pem')
 print(res.text)
 

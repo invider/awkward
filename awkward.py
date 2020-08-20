@@ -2,6 +2,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import sys
 import ssl
+import secrets
 import urllib
 import subprocess
 
@@ -10,11 +11,15 @@ bindHost = 'localhost'
 serverPort = 11911
 
 env = {
+    # server options
     'bind': 'localhost',
     'port': 9801,
+    # db options
     'source': '.',
     'include': '*',
     'separator': '',
+    # security options
+    'auth': False,
     'tls': False,
     'cert': './cert/awkward.crt',
     'key': './cert/awkward.key',
@@ -31,6 +36,12 @@ def isEnabled(key):
         return True
     else:
         return False
+
+def isDisabled(key):
+    if key in env and env[key] == True:
+        return False
+    else:
+        return True
 
 def configure():
     key = ''
@@ -56,6 +67,8 @@ def configure():
             key = 'cert'
         elif opt == '-k' or opt == '--key':
             key = 'key'
+        elif opt == '-x' or opt == '--auth':
+            env['auth'] = True
         else:
             if opt.startswith('-'):
                 raise ValueError('Unknown option [' + opt + ']!')
@@ -75,10 +88,42 @@ def configure():
 
     return
 
+def setupToken():
+    if isDisabled('auth'):
+        return
+    xtoken = secrets.token_urlsafe(16)
+    env['xtoken'] = xtoken
+    print('Access Token: [' + xtoken + ']')
+    return
+
+def authenticate(headers):
+    if isDisabled('auth'):
+        return True
+
+    if not 'X-Token' in headers:
+        if isEnabled('verbose'):
+            print('Access Denied! No "X-Token" in headers!')
+        return False
+
+    xtoken = headers['X-Token']
+    if (xtoken == env['xtoken']):
+        return True
+    else:
+        if isEnabled('verbose'):
+            print('Access Denied! [' + xtoken + '] != [' + env['xtoken'] + ']')
+        return False
+
 
 class AwkwardServer(BaseHTTPRequestHandler):
     def do_GET(self):
         #result = subprocess.run(["cat data.csv | awk -F ',' '{ print $2 }'"], shell=True, stdout=subprocess.PIPE)
+
+        auth = authenticate(self.headers)
+
+        if not auth:
+            self.send_response(401)
+            self.end_headers()
+            return
 
         url = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(url.query)
@@ -120,6 +165,7 @@ class AwkwardServer(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     print('Awkward v0.1')
     configure()
+    setupToken()
 
     # setup http server
     protocol = 'http'

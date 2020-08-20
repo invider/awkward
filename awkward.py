@@ -12,6 +12,7 @@ env = {
     'bind': 'localhost',
     'port': 9801,
     'source': '.',
+    'tls': False,
     'cert': './cert/awkward.crt',
     'key': './cert/awkward.key',
 }
@@ -32,6 +33,16 @@ def configure():
             env['verbose'] = True
         elif opt == '-s' or opt == '--source':
             key = 'source'
+        elif opt == '-b' or opt == '--bind':
+            key = 'bind'
+        elif opt == '-p' or opt == '--port':
+            key = 'port'
+        elif opt == '-t' or opt == '--tls':
+            env['tls'] = True
+        elif opt == '-c' or opt == '--cert':
+            key = 'cert'
+        elif opt == '-k' or opt == '--key':
+            key = 'key'
         else:
             if opt.startswith('-'):
                 raise ValueError('Unknown option [' + opt + ']!')
@@ -79,14 +90,19 @@ if __name__ == '__main__':
     print('Awkward v0.1')
     configure()
 
-    # setup https server
+    # setup http server
+    protocol = 'http'
     httpd = HTTPServer((env['bind'], env['port']), AwkwardServer)
-    httpd.socket = ssl.wrap_socket(httpd.socket,
-                    server_side = True,
-                    certfile = env['cert'],
-                    keyfile = env['key'],
-                    ssl_version = ssl.PROTOCOL_TLS)
-    print("Awkward start at https://%s:%s" % (env['bind'], env['port']))
+
+    if isEnabled('tls'):
+        protocol = 'https'
+        httpd.socket = ssl.wrap_socket(httpd.socket,
+                        server_side = True,
+                        certfile = env['cert'],
+                        keyfile = env['key'],
+                        ssl_version = ssl.PROTOCOL_TLS)
+
+    print("Awkward start at %s://%s:%s" % (protocol, env['bind'], env['port']))
 
     try:
         httpd.serve_forever()

@@ -3,18 +3,53 @@ from requests import Request, Session
 import sys
 import urllib
 
-host = 'https://localhost:9801'
-xtoken = '7sijC9zL-C3L7b7Xb0nvzQ'
-query = ''
+env = {
+    'host': 'https://localhost:9801',
+    'cert': './cert/awkwardCA.pem',
+    'query': '',
+}
+
+def option(key):
+    if key in env:
+        return env[key]
+    else:
+        return ''
+
+def isEnabled(key):
+    if key in env and env[key] == True:
+        return True
+    else:
+        return False
 
 def configure():
-    global query
-    length = len(sys.argv)
-    if length > 1:
-        query = sys.argv[1]
+    key = ''
+    n = len(sys.argv)
+    for i in range(1, n):
+        opt = sys.argv[i]
+
+        if opt == '-v' or opt == '--verbose':
+            env['verbose'] = True
+        elif opt == '-h' or opt == '--host':
+            key = 'host'
+        elif opt == '-x' or opt == '--auth':
+            key = 'xtoken'
+        else:
+            if opt.startswith('-'):
+                raise ValueError('Unknown option [' + opt + ']')
+            elif key != '':
+                env[key] = opt
+            else:
+                env['query'] = opt
+
+    if isEnabled('verbose'):
+        for k in env:
+            print(k + ':\t' + str(env[k]))
+
 
 def compileUrl():
-    url = host
+    url = option('host')
+
+    query = option('query')
     if query != '':
         url = url + '?q=' + urllib.parse.quote(query)
 
@@ -26,8 +61,8 @@ configure()
 session = Session()
 
 headers = {
-    'X-Token': xtoken,
+    'X-Token': option('xtoken'),
 }
-res = session.get(compileUrl(), headers=headers, verify = './cert/awkwardCA.pem')
+res = session.get(compileUrl(), headers=headers, verify = option('cert'))
 print(res.text)
 

@@ -115,14 +115,19 @@ def authenticate(headers):
 
 
 class AwkwardServer(BaseHTTPRequestHandler):
+
+    def deny(self):
+        self.send_response(401)
+        self.end_headers()
+        self.wfile.write(bytes("ACCESS DENIED!", "utf-8"))
+
     def do_GET(self):
         #result = subprocess.run(["cat data.csv | awk -F ',' '{ print $2 }'"], shell=True, stdout=subprocess.PIPE)
 
         auth = authenticate(self.headers)
 
         if not auth:
-            self.send_response(401)
-            self.end_headers()
+            self.deny()
             return
 
         url = urllib.parse.urlparse(self.path)

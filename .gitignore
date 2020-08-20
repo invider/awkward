@@ -10,5 +10,7 @@
 *.pid
 *.xtoken
 
-# test data
+# test scripts and data
 csv*
+*.awk
+

@@ -29,6 +29,10 @@ def configure():
 
         if opt == '-v' or opt == '--verbose':
             env['verbose'] = True
+        elif opt == '-p' or opt == '--post':
+            env['post'] = True
+        elif opt == '-f' or opt == '--file':
+            key = 'file'
         elif opt == '-h' or opt == '--host':
             key = 'host'
         elif opt == '-x' or opt == '--auth':
@@ -45,8 +49,14 @@ def configure():
         for k in env:
             print(k + ':\t' + str(env[k]))
 
+def read_query():
+    path = option('file')
+    if path != '':
+        with open(path, 'r') as f:
+            env['query'] = f.read()
 
-def compileUrl():
+
+def compile_get_url():
     url = option('host')
 
     query = option('query')
@@ -56,13 +66,22 @@ def compileUrl():
     print(url)
     return url
 
+def compile_post_url():
+    return option('host')
+
 configure()
+read_query()
 
 session = Session()
-
 headers = {
     'X-Token': option('xtoken'),
 }
-res = session.get(compileUrl(), headers=headers, verify = option('cert'))
+
+if isEnabled('post'):
+    res = session.post(compile_post_url(), headers=headers,
+            data = option('query'), verify = option('cert'))
+else:
+    res = session.get(compile_get_url(), headers=headers, verify = option('cert'))
+
 print(res.text)
 

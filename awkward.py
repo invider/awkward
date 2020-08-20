@@ -96,7 +96,7 @@ def readToken():
     if os.path.isfile(path):
         if isEnabled('verbose'):
             print('reading access token cached in [' + path + ']')
-        with open(path) as f:
+        with open(path, 'r') as f:
             data = f.read()
         return data.strip()
     else:
@@ -154,13 +154,29 @@ class AwkwardServer(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes("ACCESS DENIED!", "utf-8"))
 
-    def do_GET(self):
-        #result = subprocess.run(["cat data.csv | awk -F ',' '{ print $2 }'"], shell=True, stdout=subprocess.PIPE)
-
+    def auth(self):
         auth = authenticate(self.headers)
-
         if not auth:
             self.deny()
+            return False
+        else:
+            return True
+
+    def OK(self, data):
+        length = len(data)
+        if isEnabled('verbose'):
+            print(data.decode('utf-8', errors='ignore'))
+            print('Length: ' + str(length))
+
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.send_header("Content-length", length)
+        self.end_headers()
+        self.wfile.write(data)
+
+
+    def do_GET(self):
+        if not self.auth():
             return
 
         url = urllib.parse.urlparse(self.path)
@@ -185,20 +201,33 @@ class AwkwardServer(BaseHTTPRequestHandler):
             q += " '" + query + "'"
 
         result = subprocess.run([q], shell=True, stdout=subprocess.PIPE)
-        length = len(result.stdout)
-        if isEnabled('verbose'):
-            print(result.stdout.decode('utf-8', errors='ignore'))
-            print('Length: ' + str(length))
+        self.OK(result.stdout)
 
-        self.send_response(200)
-        self.send_header("Content-type", "text/plain")
-        self.send_header("Content-length", length)
-        self.end_headers()
-        self.wfile.write(result.stdout)
-        #self.wfile.write(bytes("<html><head><title>Awkward</title></head><body>", "utf-8"))
-        #self.wfile.write(bytes("<p>Request: %s</p><hr><pre>" %self.path, "utf-8"))
-        #self.wfile.write(result.stdout)
-        #self.wfile.write(bytes("</pre></body></html>", "utf-8"))
+    def do_POST(self):
+        if not self.auth():
+            return
+
+        content_length = int(self.headers['Content-Length'])
+        data = self.rfile.read(content_length)
+        query = data.decode('utf-8')
+
+
+        # form a query
+        q = ("find " + option('source') + " -type f -name '" +
+                    option('include') + "' -exec cat {} +")
+
+        if len(query) > 0:
+            if isEnabled('verbose'):
+                print('AWK: [' + query + ']')
+            q += " | awk "
+            fs = option('separator')
+            if fs != '':
+                q += " -F\\" + fs
+            q += " '" + query + "'"
+
+        result = subprocess.run([q], shell=True, stdout=subprocess.PIPE)
+        self.OK(result.stdout)
+
 
 if __name__ == '__main__':
     print('Awkward v0.1')

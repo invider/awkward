@@ -8,4 +8,4 @@
 # awkward
 *.log
 *.pid
-csv
+csv*

@@ -2,6 +2,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import sys
 import ssl
+import urllib
 import subprocess
 
 # server
@@ -12,10 +13,18 @@ env = {
     'bind': 'localhost',
     'port': 9801,
     'source': '.',
+    'include': '*',
+    'separator': '',
     'tls': False,
     'cert': './cert/awkward.crt',
     'key': './cert/awkward.key',
 }
+
+def option(key):
+    if key in env:
+        return env[key]
+    else:
+        return ''
 
 def isEnabled(key):
     if key in env and env[key] == True:
@@ -33,6 +42,10 @@ def configure():
             env['verbose'] = True
         elif opt == '-s' or opt == '--source':
             key = 'source'
+        elif opt == '-i' or opt == '--include':
+            key = 'include'
+        elif opt == '-f' or opt == '--separator':
+            key = 'separator'
         elif opt == '-b' or opt == '--bind':
             key = 'bind'
         elif opt == '-p' or opt == '--port':
@@ -67,8 +80,26 @@ class AwkwardServer(BaseHTTPRequestHandler):
     def do_GET(self):
         #result = subprocess.run(["cat data.csv | awk -F ',' '{ print $2 }'"], shell=True, stdout=subprocess.PIPE)
 
+        url = urllib.parse.urlparse(self.path)
+        qs = urllib.parse.parse_qs(url.query)
+
+        query = ''
+        if 'q' in qs:
+            if len(qs['q']) > 0:
+                query = qs['q'][0]
+
         # form a query
-        q = "find " + env['source'] + " -type f -exec cat {} +"
+        q = ("find " + option('source') + " -type f -name '" +
+                    option('include') + "' -exec cat {} +")
+
+        if len(query) > 0:
+            if isEnabled('verbose'):
+                print('AWK: [' + query + ']')
+            q += " | awk "
+            fs = option('separator')
+            if fs != '':
+                q += " -F\\" + fs
+            q += " '" + query + "'"
 
         result = subprocess.run([q], shell=True, stdout=subprocess.PIPE)
         length = len(result.stdout)
@@ -92,10 +123,14 @@ if __name__ == '__main__':
 
     # setup http server
     protocol = 'http'
-    httpd = HTTPServer((env['bind'], env['port']), AwkwardServer)
+    httpd = HTTPServer((option('bind'), option('port')), AwkwardServer)
 
     if isEnabled('tls'):
         protocol = 'https'
+        if isEnabled('verbose'):
+            print('== using https/tls ==')
+            print('private key: ' + env['key'])
+            print('certificate: ' + env['cert'])
         httpd.socket = ssl.wrap_socket(httpd.socket,
                         server_side = True,
                         certfile = env['cert'],

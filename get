@@ -1,14 +1,28 @@
 #!/usr/bin/env python
-
 from requests import Request, Session
+import sys
+import urllib
 
-server = 'https://localhost:11911'
+host = 'https://localhost:9801'
+query = ''
 
+def configure():
+    global query
+    length = len(sys.argv)
+    if length > 1:
+        query = sys.argv[1]
+
+def compileUrl():
+    url = host
+    if query != '':
+        url = url + '?q=' + urllib.parse.quote(query)
+
+    print(url)
+    return url
+
+configure()
 
 session = Session()
-
-res = session.get(server, verify = './cert/awkwardCA.pem')
-
-
+res = session.get(compileUrl(), verify = './cert/awkwardCA.pem')
 print(res.text)
 

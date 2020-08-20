@@ -7,11 +7,13 @@ import subprocess
 # server
 bindHost = 'localhost'
 serverPort = 11911
-cert = './cert/awkward.crt'
-key = './cert/awkward.key'
 
 env = {
+    'bind': 'localhost',
+    'port': 9801,
     'source': '.',
+    'cert': './cert/awkward.crt',
+    'key': './cert/awkward.key',
 }
 
 def isEnabled(key):
@@ -44,7 +46,8 @@ def configure():
 
     if isEnabled('verbose'):
         print('=== configuration ===')
-        print(str(env))
+        for k in env:
+            print(k + ':\t' + str(env[k]))
 
     return
 
@@ -63,25 +66,27 @@ class AwkwardServer(BaseHTTPRequestHandler):
             print('Length: ' + str(length))
 
         self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        #self.send_header("Content-length", length)
+        self.send_header("Content-type", "text/plain")
+        self.send_header("Content-length", length)
         self.end_headers()
-        self.wfile.write(bytes("<html><head><title>Awkward</title></head><body>", "utf-8"))
-        self.wfile.write(bytes("<p>Request: %s</p><hr><pre>" %self.path, "utf-8"))
         self.wfile.write(result.stdout)
-        self.wfile.write(bytes("</pre></body></html>", "utf-8"))
+        #self.wfile.write(bytes("<html><head><title>Awkward</title></head><body>", "utf-8"))
+        #self.wfile.write(bytes("<p>Request: %s</p><hr><pre>" %self.path, "utf-8"))
+        #self.wfile.write(result.stdout)
+        #self.wfile.write(bytes("</pre></body></html>", "utf-8"))
 
-if __name__ == "__main__":
+if __name__ == '__main__':
+    print('Awkward v0.1')
     configure()
 
     # setup https server
-    httpd = HTTPServer((bindHost, serverPort), AwkwardServer)
+    httpd = HTTPServer((env['bind'], env['port']), AwkwardServer)
     httpd.socket = ssl.wrap_socket(httpd.socket,
                     server_side = True,
-                    certfile = cert,
-                    keyfile = key,
+                    certfile = env['cert'],
+                    keyfile = env['key'],
                     ssl_version = ssl.PROTOCOL_TLS)
-    print("Server is listening at https://%s:%s" % (bindHost, serverPort))
+    print("Awkward start at https://%s:%s" % (env['bind'], env['port']))
 
     try:
         httpd.serve_forever()

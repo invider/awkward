@@ -1,7 +1,11 @@
-
 # SSL
 *.key
 *.pem
 *.srl
 *.csr
 *.crt
+
+# awkward
+*.log
+*.pid
+csv

@@ -35,8 +35,10 @@ def configure():
             key = 'file'
         elif opt == '-h' or opt == '--host':
             key = 'host'
-        elif opt == '-x' or opt == '--auth':
+        elif opt == '-x' or opt == '--xtoken':
             key = 'xtoken'
+        elif opt == '-X' or opt == '--qtoken':
+            key = 'qtoken'
         else:
             if opt.startswith('-'):
                 raise ValueError('Unknown option [' + opt + ']')
@@ -59,9 +61,19 @@ def read_query():
 def compile_get_url():
     url = option('host')
 
+    state = 0
     query = option('query')
     if query != '':
-        url = url + '?q=' + urllib.parse.quote(query)
+        url += '?q=' + urllib.parse.quote(query)
+        state = 1
+
+    qtoken = option('qtoken')
+    if qtoken != '':
+        if state == 0:
+            url += '?'
+        else:
+            url += '&'
+        url += 'x=' + qtoken
 
     print(url)
     return url
@@ -73,9 +85,9 @@ configure()
 read_query()
 
 session = Session()
-headers = {
-    'X-Token': option('xtoken'),
-}
+headers = {}
+if 'xtoken' in env:
+    headers['X-Token'] = option('xtoken')
 
 if isEnabled('post'):
     res = session.post(compile_post_url(), headers=headers,

@@ -140,16 +140,19 @@ def setupToken():
             f.close()
 
 
-def authenticate(headers):
+def authenticate(headers, xtoken):
     if isDisabled('auth'):
         return True
 
-    if not 'X-Token' in headers:
+    if xtoken == '':
+        if 'X-Token' in headers:
+            xtoken = headers['X-Token']
+
+    if xtoken == '':
         if isEnabled('verbose'):
-            print('Access Denied! No "X-Token" in headers!')
+            print('Access Denied! No "X-Token" in query or headers!')
         return False
 
-    xtoken = headers['X-Token']
     if (xtoken == env['xtoken']):
         return True
     else:
@@ -165,8 +168,8 @@ class AwkwardServer(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(bytes("ACCESS DENIED!", "utf-8"))
 
-    def auth(self):
-        auth = authenticate(self.headers)
+    def auth(self, token):
+        auth = authenticate(self.headers, token)
         if not auth:
             self.deny()
             return False
@@ -188,9 +191,6 @@ class AwkwardServer(BaseHTTPRequestHandler):
 
 
     def do_GET(self):
-        if not self.auth():
-            return
-
         url = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(url.query)
 
@@ -198,6 +198,14 @@ class AwkwardServer(BaseHTTPRequestHandler):
         if 'q' in qs:
             if len(qs['q']) > 0:
                 query = qs['q'][0]
+
+        token = ''
+        if 'x' in qs:
+            if len(qs['x']) > 0:
+                token = qs['x'][0]
+
+        if not self.auth(token):
+            return
 
         if isEnabled('trace'):
             print('===========================================')
@@ -221,7 +229,7 @@ class AwkwardServer(BaseHTTPRequestHandler):
         self.OK(result.stdout)
 
     def do_POST(self):
-        if not self.auth():
+        if not self.auth(''):
             return
 
         content_length = int(self.headers['Content-Length'])

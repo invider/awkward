@@ -62,6 +62,8 @@ def configure():
 
         elif opt == '-v' or opt == '--verbose':
             env['verbose'] = True
+        elif opt == '-e' or opt == '--trace':
+            env['trace'] = True
         elif opt == '-s' or opt == '--source':
             key = 'source'
         elif opt == '-i' or opt == '--include':
@@ -173,9 +175,10 @@ class AwkwardServer(BaseHTTPRequestHandler):
 
     def OK(self, data):
         length = len(data)
-        if isEnabled('verbose'):
+        if isEnabled('trace'):
             print(data.decode('utf-8', errors='ignore'))
             print('Length: ' + str(length))
+            print('')
 
         self.send_response(200)
         self.send_header("Content-type", "text/plain")
@@ -195,6 +198,11 @@ class AwkwardServer(BaseHTTPRequestHandler):
         if 'q' in qs:
             if len(qs['q']) > 0:
                 query = qs['q'][0]
+
+        if isEnabled('trace'):
+            print('===========================================')
+            print(query)
+            print('-------------------------------------------')
 
         # form a query
         q = ("find " + option('source') + " -type f -name '" +
@@ -219,7 +227,11 @@ class AwkwardServer(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         data = self.rfile.read(content_length)
         query = data.decode('utf-8')
-
+        if isEnabled('trace'):
+            print('===========================================')
+            print(query)
+            print('-------------------------------------------')
+            
 
         # form a query
         q = ("find " + option('source') + " -type f -name '" +
@@ -264,6 +276,7 @@ def help():
 
 === help and debug options ===
     -v | --verbose - enable verbose output
+    -e | --trace   - show request and response data
     -h | --help    - show help data
     -n | --version - show the version
 ''')
@@ -289,8 +302,12 @@ if __name__ == '__main__':
                         certfile = env['cert'],
                         keyfile = env['key'],
                         ssl_version = ssl.PROTOCOL_TLS)
+    else:
+        if isEnabled('verbose'):
+            print('== using http ==')
 
-    print("Awkward start at %s://%s:%s" % (protocol, env['bind'], env['port']))
+
+    print("awkward start at %s://%s:%s" % (protocol, env['bind'], env['port']))
 
     try:
         httpd.serve_forever()

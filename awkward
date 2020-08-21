@@ -12,6 +12,7 @@ bindHost = 'localhost'
 serverPort = 11911
 
 env = {
+    'version': '0.1',
     # server options
     'bind': 'localhost',
     'port': 9801,
@@ -51,7 +52,15 @@ def configure():
     for i in range(1,n):
         opt = sys.argv[i]
 
-        if opt == '-v' or opt == '--verbose':
+        if opt == '-h' or opt == '--help':
+            help()
+            exit(0)
+
+        elif opt == '-n' or opt == '--version':
+            version()
+            exit(0)
+
+        elif opt == '-v' or opt == '--verbose':
             env['verbose'] = True
         elif opt == '-s' or opt == '--source':
             key = 'source'
@@ -228,9 +237,40 @@ class AwkwardServer(BaseHTTPRequestHandler):
         result = subprocess.run([q], shell=True, stdout=subprocess.PIPE)
         self.OK(result.stdout)
 
+def version():
+    print('awkward version ' + env['version'])
+
+def help():
+    print('awkward v' + env['version'] + ' - zero maintenance on-demand awk-powered database engine') 
+    print('''usage: awkward [-s | --source] [-i | --include] [-f | --separator]
+                [-b | --bind ] [-p | --port]
+                [-t | --tls] [-c | --cert] [-k | --key] [-a | --auth]
+                [-v | --verbose] [--version] [-h | --help]
+
+=== data options ===
+    -s | --source <path>     source data path (default: '.')
+    -i | --include <pattern> file names to include, e.g '*.log' or '*.csv' (default: '')
+    -f | --separator <expr>  default awk data separator, e.g. ',' or ':' (default: '')
+
+=== server options ===
+    -b | --bind <host>   address to bind the socket (localhost)
+    -p | --port <number> a server listen port (9108)
+
+=== security options ===
+    -t | --tls         enable tls
+    -c | --cert <path> path to a tls certificate file (./cert/awkward.crt)
+    -k | --key <path>  path to a tls private key file (./cert/awkward.key)
+    -a | --auth - enable simple token authentication
+
+=== help and debug options ===
+    -v | --verbose - enable verbose output
+    -h | --help    - show help data
+    -n | --version - show the version
+''')
+
 
 if __name__ == '__main__':
-    print('Awkward v0.1')
+    #print('awkward v' + env['version'])
     configure()
     setupToken()
 

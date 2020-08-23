@@ -44,6 +44,7 @@ def configure():
                 raise ValueError('Unknown option [' + opt + ']')
             elif key != '':
                 env[key] = opt
+                key = ''
             else:
                 env['query'] = opt
 

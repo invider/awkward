@@ -6,6 +6,7 @@ import ssl
 import secrets
 import urllib
 import subprocess
+import datetime 
 
 # server
 bindHost = 'localhost'
@@ -26,6 +27,13 @@ env = {
     'cert': './cert/awkward.crt',
     'key': './cert/awkward.key',
     'xtokenFile': './awkward.xtoken',
+}
+
+stat = {
+    'startTime': datetime.datetime.now(),
+    'hits':    0,
+    'payload': 0,
+    'upload':  0,
 }
 
 def option(key):
@@ -109,6 +117,7 @@ def readToken():
             print('reading access token cached in [' + path + ']')
         with open(path, 'r') as f:
             data = f.read()
+            f.close()
         return data.strip()
     else:
         return ''
@@ -163,6 +172,9 @@ def authenticate(headers, xtoken):
 
 class AwkwardServer(BaseHTTPRequestHandler):
 
+    #protocol_version = 'HTTP/1.1'
+    protocol_version = 'HTTP/1.0'
+
     def deny(self):
         self.send_response(401)
         self.end_headers()
@@ -176,22 +188,53 @@ class AwkwardServer(BaseHTTPRequestHandler):
         else:
             return True
 
-    def OK(self, data):
+    def send(self, data, res):
         length = len(data)
         if isEnabled('trace'):
             print(data.decode('utf-8', errors='ignore'))
             print('Length: ' + str(length))
             print('')
 
-        self.send_response(200)
+        self.send_response(res)
         self.send_header("Content-type", "text/plain")
         self.send_header("Content-length", length)
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(data)
+        self.wfile.flush()
+        stat['payload'] += length
 
+    def send_text(self, message, res):
+        self.send(message.encode('utf-8'), res)
 
-    def do_GET(self):
-        url = urllib.parse.urlparse(self.path)
+    def OK(self, data):
+        self.send(data, 200)
+
+    def notFound(self, message):
+        self.send_text(message, 404)
+
+    def doPing(self):
+        self.send_text('OK', 200)
+
+    def doStat(self):
+        now = datetime.datetime.now()
+        uptime = str(now - stat['startTime']).split('.')[0]
+
+        payload = str(round(stat['payload']/1024)) + 'k'
+        upload = str(round(stat['upload']/1024)) + 'k'
+
+        st = ('awkward v' + env['version']      + '\n'
+                + 'hits: ' + str(stat['hits'])  + '\n'
+                + 'uptime: '  + uptime          + '\n'
+                + 'payload: ' + payload         + '\n'
+                + 'upload: '  + upload          + '\n'
+        )
+        self.send_text(st, 200)
+
+    def doVersion(self):
+        self.send_text('awkward v' + env['version'], 200)
+
+    def select(self, url):
         qs = urllib.parse.parse_qs(url.query)
 
         query = ''
@@ -228,12 +271,34 @@ class AwkwardServer(BaseHTTPRequestHandler):
         result = subprocess.run([q], shell=True, stdout=subprocess.PIPE)
         self.OK(result.stdout)
 
+
+    def do_GET(self):
+        stat['hits'] += 1
+        url = urllib.parse.urlparse(self.path)
+
+        if url.path == '' or url.path == '/':
+            self.select(url)
+
+        elif url.path == '/ping':
+            self.doPing()
+        elif url.path == '/stat':
+            self.doStat()
+        elif url.path == '/version':
+            self.doVersion()
+        else:
+            self.notFound('Unable to find [' + url.path + ']')
+
+
+
     def do_POST(self):
+        stat['hits'] += 1
         if not self.auth(''):
             return
 
         content_length = int(self.headers['Content-Length'])
         data = self.rfile.read(content_length)
+        stat['upload'] += content_length
+
         query = data.decode('utf-8')
         if isEnabled('trace'):
             print('===========================================')
@@ -323,4 +388,5 @@ if __name__ == '__main__':
         pass
 
     httpd.server_close()
-    print("...Server stopped!")
+    print("...awkward server stopped!")
+

@@ -223,11 +223,16 @@ class AwkwardServer(BaseHTTPRequestHandler):
         payload = str(round(stat['payload']/1024)) + 'k'
         upload = str(round(stat['upload']/1024)) + 'k'
 
+        free_mem = str(os.popen('free -m | grep Mem | awk \'{ print $4 "M/" $2 "M" }\'').readline())
+        cpu_usage = str(os.popen("top -b -n1 | grep Cpu | cut -d ':' -f2").readline())
+        
         st = ('awkward v' + env['version']      + '\n'
                 + 'hits: ' + str(stat['hits'])  + '\n'
-                + 'uptime: '  + uptime          + '\n'
-                + 'payload: ' + payload         + '\n'
-                + 'upload: '  + upload          + '\n'
+                + 'uptime: '   + uptime         + '\n'
+                + 'payload: '  + payload        + '\n'
+                + 'upload: '   + upload         + '\n'
+                + 'free mem: ' + free_mem
+                + 'cpu_usage: ' + cpu_usage
         )
         self.send_text(st, 200)
 

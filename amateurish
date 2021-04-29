@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+from requests import Request, Session
+import sys
+import urllib
+
+env = {
+    'version': '0.1',
+    'host': 'http://localhost:9801',
+    'cert': './cert/awkwardCA.pem',
+    'query': '',
+}
+
+def option(key):
+    if key in env:
+        return env[key]
+    else:
+        return ''
+
+def isEnabled(key):
+    if key in env and env[key] == True:
+        return True
+    else:
+        return False
+
+def configure():
+    key = ''
+    n = len(sys.argv)
+    for i in range(1, n):
+        opt = sys.argv[i]
+
+        if opt == '-h' or opt == '--help':
+            help()
+            exit(0)
+        elif opt == '-v' or opt == '--verbose':
+            env['verbose'] = True
+        elif opt == '-p' or opt == '--post':
+            env['post'] = True
+        elif opt == '-f' or opt == '--file':
+            key = 'file'
+        elif opt == '-h' or opt == '--host':
+            key = 'host'
+        elif opt == '-x' or opt == '--xtoken':
+            key = 'xtoken'
+        elif opt == '-X' or opt == '--qtoken':
+            key = 'qtoken'
+        elif opt == '-c' or opt == '--cert':
+            key = 'cert'
+        else:
+            if opt.startswith('-'):
+                raise ValueError('Unknown option [' + opt + ']')
+            elif key != '':
+                env[key] = opt
+                key = ''
+            else:
+                env['query'] = opt
+
+    if isEnabled('verbose'):
+        for k in env:
+            print(k + ':\t' + str(env[k]))
+
+def help():
+    print('amateurish v' + env['version'] + ' - client shell for awkward database engine')
+    print('''usage: amateurish [-h | --host] [-t | --term]
+                  [-x | --xtoken] [-X | --qtoken]
+                  [-v | --verbose] [--version] [-h | --help]
+                  [-c | --cert]
+
+=== available options ===
+    -h | --host              server host and port (default: 'http://localhost:9801')
+    -f | --file <path>       query file
+    -t | --term              interactive terminal
+    -c | --cert <path>       CA certificate
+    -x | --xtoken <token>    put "X-Token" attribute in HTTP headers
+    -X | --qtoken <token>    put <token> in query string as [x] parameter
+    -p | --post              use HTTP POST
+    -h | --help              show shell help
+         --version           show the app version
+''')
+
+
+def read_query():
+    path = option('file')
+    if path != '':
+        with open(path, 'r') as f:
+            env['query'] = f.read()
+
+
+def compile_get_url():
+    url = option('host')
+
+    state = 0
+    query = option('query')
+    if query != '':
+        url += '?q=' + urllib.parse.quote(query)
+        state = 1
+
+    qtoken = option('qtoken')
+    if qtoken != '':
+        if state == 0:
+            url += '?'
+        else:
+            url += '&'
+        url += 'x=' + qtoken
+
+    print(url)
+    return url
+
+def compile_post_url():
+    return option('host')
+
+configure()
+read_query()
+
+session = Session()
+headers = {}
+if 'xtoken' in env:
+    headers['X-Token'] = option('xtoken')
+
+if isEnabled('post'):
+    res = session.post(compile_post_url(), headers=headers,
+            data = option('query'), verify = option('cert'))
+else:
+    res = session.get(compile_get_url(), headers=headers, verify = option('cert'))
+
+print(res.text)
+

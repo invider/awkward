@@ -281,15 +281,15 @@ class AwkwardServer(BaseHTTPRequestHandler):
         stat['hits'] += 1
         url = urllib.parse.urlparse(self.path)
 
-        if url.path == '' or url.path == '/':
-            self.select(url)
-
-        elif url.path == '/ping':
+        if url.path == '/ping':
             self.doPing()
         elif url.path == '/stat':
             self.doStat()
         elif url.path == '/version':
             self.doVersion()
+        elif url.path == '' or url.path == '/':
+            self.select(url)
+
         else:
             self.notFound('Unable to find [' + url.path + ']')
 
